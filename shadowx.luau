@@ -1,26 +1,27 @@
 --!strict
--- [[ SHADOW X FLY - LUAU EDITION ]] --
+-- [[ SHADOW X FLY - LUAU EDITION ]]
+-- Loader: loadstring(game:HttpGet("https://raw.githubusercontent.com/flyguiv5/shadow-X-fly-All-game-/main/shadowx.luau"))()
 
--- 1. Đợi game và nhân vật load xong (Chống lỗi Index Nil)
+-- 1. CHỜ GAME LOAD (Task Wait & Repeat chuẩn Luau)
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+repeat task.wait() until game.Players.LocalPlayer
+local p = game.Players.LocalPlayer
+repeat task.wait() until p.Character and p.Character:FindFirstChild("HumanoidRootPart")
 
--- Đợi nhân vật xuất hiện
-local character = player.Character or player.CharacterAdded:Wait()
+local run = game:GetService("RunService")
+local uis = game:GetService("UserInputService")
 
--- 2. Cấu hình
-local flying: boolean = false
-local speed: number = 100
+-- 2. CẤU HÌNH
+local flying = false
+local speed = 100
 local bv: BodyVelocity? = nil
 local bg: BodyGyro? = nil
 
--- 3. Tạo Giao diện (GUI)
-local sg = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+-- 3. GIAO DIỆN NÚT BẤM (GUI)
+local sg = Instance.new("ScreenGui", p:WaitForChild("PlayerGui"))
 sg.Name = "ShadowX_Global"
 sg.ResetOnSpawn = false
 
@@ -28,7 +29,7 @@ local FlyBtn = Instance.new("TextButton", sg)
 FlyBtn.Size = UDim2.new(0, 120, 0, 45)
 FlyBtn.Position = UDim2.new(0.5, -60, 0.05, 0)
 FlyBtn.Text = "SHADOW X: OFF"
-FlyBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+FlyBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 FlyBtn.TextColor3 = Color3.new(1, 1, 1)
 FlyBtn.Font = Enum.Font.GothamBold
 FlyBtn.Draggable = true
@@ -36,9 +37,9 @@ FlyBtn.Draggable = true
 local corner = Instance.new("UICorner", FlyBtn)
 corner.CornerRadius = UDim.new(0, 10)
 
--- 4. Hàm điều khiển bay
+-- 4. HÀM ĐIỀU KHIỂN
 local function toggleFly()
-    local char = player.Character
+    local char = p.Character
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart") :: BasePart?
     local hum = char:FindFirstChildOfClass("Humanoid")
@@ -49,22 +50,24 @@ local function toggleFly()
         -- Bật bay
         bv = Instance.new("BodyVelocity", root)
         bv.Name = "ShadowX_Vel"
-        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bv.MaxForce = Vector3.new(1, 1, 1) * math.huge
+        bv.Velocity = Vector3.new(0, 0, 0)
         
         bg = Instance.new("BodyGyro", root)
         bg.Name = "ShadowX_Gyro"
-        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bg.MaxTorque = Vector3.new(1, 1, 1) * math.huge
         bg.P = 5000
+        bg.CFrame = root.CFrame
         
         hum:ChangeState(Enum.HumanoidStateType.Physics)
         flying = true
         FlyBtn.Text = "SHADOW X: ON"
-        FlyBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+        FlyBtn.BackgroundColor3 = Color3.fromRGB(138, 43, 226) -- Màu tím Luau
     else
         -- Tắt bay
         flying = false
         FlyBtn.Text = "SHADOW X: OFF"
-        FlyBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        FlyBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         
         hum:ChangeState(Enum.HumanoidStateType.GettingUp)
         if bv then bv:Destroy() end
@@ -72,12 +75,20 @@ local function toggleFly()
     end
 end
 
+-- 5. KẾT NỐI SỰ KIỆN
 FlyBtn.MouseButton1Click:Connect(toggleFly)
 
--- 5. Vòng lặp di chuyển Joystick 3D
-RunService.RenderStepped:Connect(function()
-    if flying and player.Character then
-        local char = player.Character
+-- Phím tắt Q cho PC hoặc bàn phím rời
+uis.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.Q then
+        toggleFly()
+    end
+end)
+
+-- 6. VÒNG LẶP DI CHUYỂN (Joystick 3D)
+run.RenderStepped:Connect(function()
+    if flying and p.Character then
+        local char = p.Character
         local root = char:FindFirstChild("HumanoidRootPart") :: BasePart?
         local hum = char:FindFirstChildOfClass("Humanoid")
         local cam = workspace.CurrentCamera.CFrame
@@ -87,7 +98,7 @@ RunService.RenderStepped:Connect(function()
             bg.CFrame = cam
             
             if moveDir.Magnitude > 0 then
-                -- Bay theo hướng camera nhìn
+                -- Bay theo hướng camera nhìn bằng Joystick
                 local finalDir = (cam.LookVector * -moveDir.Z) + (cam.RightVector * moveDir.X)
                 bv.Velocity = finalDir.Unit * speed
             else
@@ -98,13 +109,13 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- 6. Hỗ trợ reset nhân vật
-player.CharacterAdded:Connect(function(newChar)
+-- Reset khi nhân vật chết
+p.CharacterAdded:Connect(function()
     task.wait(1)
     if flying then
-        flying = false -- Reset trạng thái để start lại sạch sẽ
+        flying = false
         toggleFly()
     end
 end)
 
-print("Shadow X Fly Loaded Successfully!")
+print("Shadow X Fly: Luau Version Loaded!")
